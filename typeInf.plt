@@ -31,7 +31,7 @@ test(typeStatement_gvar, [nondet, true(T == int)]) :- % should succeed with T=in
 % same test as above but with infer 
 test(infer_gvar, [nondet]) :-
     infer([gvLet(v, T, iplus(X, Y))], unit),
-    assertion(T==int), assertion(X==int), assertion(Y=int),
+    assertion(T == int), assertion(X == int), assertion(Y = int),
     gvar(v,int).
 
 % test custom function with mocked definition
@@ -41,4 +41,4 @@ test(mockedFct, [nondet]) :-
     typeExp(my_fct(X), T), % infer type of expression using or function
     assertion(X==int), assertion(T==float). % make sure the types infered are correct
 
-:-end_tests(typeInf).
+:- end_tests(typeInf).

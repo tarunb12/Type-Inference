@@ -106,4 +106,4 @@ functionType(Name, Args) :-
     fType(Name, Args), !. % make deterministic
 
 % This gets wiped out but we have it here to make the linter happy
-gvar(_, _) :- false().
+:- dynamic(gvar/2).
