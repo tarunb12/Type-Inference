@@ -33,25 +33,32 @@ typeStatement(if(Cond, TCode, FCode), T) :-
     typeExp(FCode, T),      % Check type of code for false condition
     bType(T).               % Check that T is basic type
 
-% for(gvLet(Name, LetT, LetCode), Cond, Increment, ForCode) ~ for ()
+typeStatement(while(Cond, Code), T) :-
+    typeExp(Cond, bool),
+    typeExp(Code, T),
+    bType(T).
+
+% for(gvLet(v, LetT, int), Cond, Increment, ForCode) ~ for (let v = int; Cond; Increment) { ...ForCode }
 typeStatement(for(gvLet(Name, LetT, LetCode), Cond, Increment, ForCode), CodeT) :-
-    atom(Name),
-    typeExp(LetCode, LetT),
-    bType(LetT),
+    atom(Name),                 % Check that the variable name is an atom
+    typeExp(LetCode, LetT),     % Check Code is same type as T
+    bType(LetT),                % Check variable is basic type
     asserta(gvar(Name, LetT)),  % Add definition to database
     typeExp(Cond, bool),        % Check conditional type is bool
-    typeExp(Increment, LetT),
-    typeExp(ForCode, CodeT),
+    typeExp(Increment, LetT),   % Check type of increment
+    typeExp(ForCode, CodeT),    % Check type of for code
     deleteGVars().              % Remove definitions from database
+
+typeStatement(T, T).
+typeStatement([T], T) :- typeStatement(T, T).
 
 % typeStatement(fctLet(Name, T, TCode, S, Code), S).
 
 % Code is simply a list of statements. The type is 
 % the type of the last statement 
-
 typeCode([S], T) :- typeStatement(S, T).
 typeCode([S, S2|Code], T) :-
-    typeStatement(S,_T),
+    typeStatement(S, _T),
     typeCode([S2|Code], T).
 
 % top level function
@@ -68,47 +75,18 @@ bType(bool).                        % Basic boolean type
 bType(unit).                        % Basic unit type (non-expressions)
 bType([H]) :- bType(H).             % Basic function type 'a ([a])
 bType([H|T]) :- bType(H), bType(T). % Basic function type 'a -> ... -> 'z ([a, ..., z])
-/*  functions type.
-    The type is a list, the last element is the return type
-    E.g. add: int->int->int is represented as [int, int, int]
-    and can be called as add(1,2)->3
- */
-
-/*
-    TODO: as you encounter global variable definitions
-    or global functions add their definitions to 
-    the database using:
-        asserta( gvar(Name, Type) )
-    To check the types as you encounter them in the code
-    use:
-        gvar(Name, Type) with the Name bound to the name.
-    Type will be bound to the global type
-    Examples:
-        g
-
-    Call the predicate deleveGVars() to delete all global 
-    variables. Best wy to do this is in your top predicate
-*/
-
-deleteGVars() :- retractall(gvar), asserta(gvar(_X, _Y) :- false()).
 
 % Built in functions
-fType(iplus, [int, int, int]).          % (int + int) -> [int]
-fType(fplus, [float, float, float]).    % (float + float) -> [float]
+fType(iplus, [int, int, int]).          % (int + int) -> int
+fType(fplus, [float, float, float]).    % (float + float) -> float
 fType(fToInt, [float, int]).            % float -> int (conversion)
 fType(iToFloat, [int, float]).          % int -> float (conversion)
 fType(lessThan, [int, int, bool]).      % (int > int) -> bool
 fType(greaterThan, [int, int, bool]).   % (int < int) -> bool
-fType(equal, [int, int, bool]).         % (int = int) -> bool
-fType(notEqual, [int, int, bool]).      % (int ≠ int) -> bool
 fType(and,[bool, bool, bool]).          % (bool && bool) -> bool
 fType(or, [bool, bool, bool]).          % (bool || bool) -> bool
-fType(print, [_X, unit]).               % simple print
-
-/* Find function signature
-   A function is either built in using fType or
-   added as a user definition with gvar(fct, List)
-*/
+fType(not, [bool, bool]).               % !bool -> bool
+fType(print, [_X, unit]).               % print -> unit
 
 % Check the user defined functions first
 functionType(Name, Args) :-
@@ -118,5 +96,7 @@ functionType(Name, Args) :-
 % Check first built in functions
 functionType(Name, Args) :-
     fType(Name, Args), !.   % make deterministic
+
+deleteGVars() :- retractall(gvar), asserta(gvar(_X, _Y) :- false()).
 
 :- dynamic(gvar/2).
